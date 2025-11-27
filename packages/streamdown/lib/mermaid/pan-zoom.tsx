@@ -31,6 +31,29 @@ export const PanZoom = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [panStartPosition, setPanStartPosition] = useState({ x: 0, y: 0 });
+  const repaintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Force browser to re-rasterize content after zoom changes
+  // This fixes blurry content after scaling down then up
+  const forceRepaint = useCallback(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    // Clear any pending repaint
+    if (repaintTimeoutRef.current) {
+      clearTimeout(repaintTimeoutRef.current);
+    }
+
+    // Debounce the repaint to avoid excessive reflows during rapid zoom
+    repaintTimeoutRef.current = setTimeout(() => {
+      // Temporarily remove and re-add will-change to force re-rasterization
+      content.style.willChange = "auto";
+      // Force a reflow
+      void content.offsetHeight;
+      // Restore will-change
+      content.style.willChange = "transform";
+    }, 200);
+  }, []);
 
   const handleZoom = useCallback(
     (delta: number) => {
@@ -38,8 +61,9 @@ export const PanZoom = ({
         const newZoom = Math.max(minZoom, Math.min(maxZoom, prevZoom + delta));
         return newZoom;
       });
+      forceRepaint();
     },
-    [minZoom, maxZoom]
+    [minZoom, maxZoom, forceRepaint]
   );
 
   const handleZoomIn = useCallback(() => {
@@ -53,7 +77,8 @@ export const PanZoom = ({
   const handleReset = useCallback(() => {
     setZoom(initialZoom);
     setPan({ x: 0, y: 0 });
-  }, [initialZoom]);
+    forceRepaint();
+  }, [initialZoom, forceRepaint]);
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {
@@ -143,6 +168,15 @@ export const PanZoom = ({
       };
     }
   }, [isPanning, handlePointerMove, handlePointerUp]);
+
+  // Cleanup repaint timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (repaintTimeoutRef.current) {
+        clearTimeout(repaintTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div

@@ -6,12 +6,13 @@ export const MermaidDemo = () => {
 ## Simple Flowchart
 
 \`\`\`mermaid
-graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Success]
-    B -->|No| D[Try Again]
-    D --> B
-    C --> E[End]
+flowchart LR
+    A[新用户阶段<br>关注易用性] --> B[过渡期<br>学习数据库概念] --> C[熟练用户<br>构建工作流] --> D[资深用户<br>深度定制系统]
+
+    A --> A1[痛点: 学习成本高]
+    B --> B1[痛点: 概念理解难]
+    C --> C1[痛点: 性能体验]
+    D --> D1[痛点: 高级功能限制]
 \`\`\`
 
 ## Process Flow
